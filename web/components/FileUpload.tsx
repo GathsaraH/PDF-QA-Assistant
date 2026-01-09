@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, FileText, X, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, X, CheckCircle2, File, Cloud } from 'lucide-react';
 import { UploadLoader, ProcessingLoader } from './Loader';
 import { showToast } from './Toast';
 
@@ -37,7 +37,6 @@ export default function FileUpload({ onUploadSuccess, sessionId }: FileUploadPro
     setUploadProgress(0);
 
     try {
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 90) {
@@ -66,11 +65,9 @@ export default function FileUpload({ onUploadSuccess, sessionId }: FileUploadPro
         throw new Error(data.detail || data.error || 'Upload failed');
       }
 
-      // Show processing animation
       setIsUploading(false);
       setIsProcessing(true);
 
-      // Simulate processing steps
       const steps = [0, 1, 2, 3, 4];
       for (const step of steps) {
         setProcessingStep(step);
@@ -141,22 +138,43 @@ export default function FileUpload({ onUploadSuccess, sessionId }: FileUploadPro
 
   return (
     <div className="w-full">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl gradient-primary shadow-glow mb-4 animate-float">
+          <Cloud className="h-8 w-8 text-white" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">Upload Your PDF</h2>
+        <p className="text-slate-500">Drop your document here and start asking questions</p>
+      </div>
+
       {!uploadedFile ? (
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           className={`
-            border-2 border-dashed rounded-xl p-12 text-center cursor-pointer
-            transition-all duration-300 transform
+            relative overflow-hidden
+            border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer
+            transition-all duration-300 ease-out
+            bg-white/80 backdrop-blur-sm
             ${isDragging 
-              ? 'border-primary-500 bg-primary-50 scale-105 shadow-lg' 
-              : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50 hover:scale-102'
+              ? 'border-primary-500 bg-primary-50/80 scale-[1.02] shadow-glow' 
+              : 'border-slate-300 hover:border-primary-400 hover:bg-white hover:shadow-lg'
             }
             ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}
           `}
           onClick={() => !isUploading && fileInputRef.current?.click()}
         >
+          {/* Background decoration */}
+          <div className="absolute inset-0 -z-10">
+            <div className={`absolute top-0 right-0 w-32 h-32 rounded-full transition-all duration-500 ${
+              isDragging ? 'bg-primary-200/50 scale-150' : 'bg-slate-100/50'
+            }`} />
+            <div className={`absolute bottom-0 left-0 w-24 h-24 rounded-full transition-all duration-500 ${
+              isDragging ? 'bg-secondary-200/50 scale-150' : 'bg-slate-100/50'
+            }`} />
+          </div>
+
           <input
             ref={fileInputRef}
             type="file"
@@ -165,43 +183,66 @@ export default function FileUpload({ onUploadSuccess, sessionId }: FileUploadPro
             className="hidden"
             disabled={isUploading || isProcessing}
           />
+          
           <div className="flex flex-col items-center space-y-4">
             <div className={`
-              p-4 rounded-full transition-all duration-300
-              ${isDragging ? 'bg-primary-100' : 'bg-gray-100'}
+              h-20 w-20 rounded-2xl flex items-center justify-center transition-all duration-300
+              ${isDragging 
+                ? 'gradient-primary shadow-glow scale-110' 
+                : 'bg-slate-100'
+              }
             `}>
-              <Upload className={`h-10 w-10 transition-colors duration-300 ${
-                isDragging ? 'text-primary-600' : 'text-gray-400'
+              <Upload className={`h-10 w-10 transition-all duration-300 ${
+                isDragging ? 'text-white animate-bounce' : 'text-slate-400'
               }`} />
             </div>
+            
             <div>
-              <p className="text-lg font-semibold text-gray-700 mb-1">
-                {isDragging ? 'Drop your PDF here' : 'Drop PDF here or click to upload'}
+              <p className={`text-lg font-semibold mb-2 transition-colors ${
+                isDragging ? 'text-primary-600' : 'text-slate-700'
+              }`}>
+                {isDragging ? 'Drop your PDF here!' : 'Drop PDF here or click to browse'}
               </p>
-              <p className="text-sm text-gray-500">Only PDF files are supported (max 10MB)</p>
+              <p className="text-sm text-slate-500">
+                Supports PDF files up to 10MB
+              </p>
+            </div>
+
+            {/* Features */}
+            <div className="flex items-center justify-center space-x-6 pt-4 text-xs text-slate-400">
+              <span className="flex items-center">
+                <File className="h-3.5 w-3.5 mr-1" />
+                PDF only
+              </span>
+              <span>•</span>
+              <span>Max 10MB</span>
+              <span>•</span>
+              <span>Secure upload</span>
             </div>
           </div>
         </div>
       ) : (
-        <div className="border-2 border-green-500 rounded-xl p-4 bg-green-50 flex items-center justify-between animate-slide-in">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
+        <div className="glass rounded-2xl p-6 border border-green-200 bg-green-50/50 animate-slide-up">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="h-14 w-14 rounded-xl bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-7 w-7 text-green-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-800 text-lg">{uploadedFile.name}</p>
+                <p className="text-sm text-slate-500">
+                  {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • Ready to process
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold text-gray-900">{uploadedFile.name}</p>
-              <p className="text-sm text-gray-600">
-                {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
-            </div>
+            <button
+              onClick={handleRemove}
+              className="p-2.5 hover:bg-red-100 rounded-xl transition-colors group"
+              title="Remove file"
+            >
+              <X className="h-5 w-5 text-slate-400 group-hover:text-red-500 transition-colors" />
+            </button>
           </div>
-          <button
-            onClick={handleRemove}
-            className="p-2 hover:bg-green-100 rounded-full transition-colors"
-            title="Remove file"
-          >
-            <X className="h-5 w-5 text-gray-600" />
-          </button>
         </div>
       )}
     </div>

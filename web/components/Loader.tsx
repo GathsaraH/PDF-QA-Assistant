@@ -15,17 +15,15 @@ export default function Loader({ message = 'Loading...', size = 'md' }: LoaderPr
   return (
     <div className="flex flex-col items-center justify-center space-y-4 p-8">
       <div className="relative">
-        {/* Outer spinning ring */}
         <div
           className={`${sizeClasses[size]} border-4 border-primary-200 border-t-primary-500 rounded-full animate-spin`}
         />
-        {/* Inner pulsing dot */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="h-2 w-2 bg-primary-500 rounded-full animate-pulse" />
         </div>
       </div>
       {message && (
-        <p className="text-sm text-gray-600 animate-pulse">{message}</p>
+        <p className="text-sm text-slate-600 animate-pulse">{message}</p>
       )}
     </div>
   );
@@ -34,37 +32,47 @@ export default function Loader({ message = 'Loading...', size = 'md' }: LoaderPr
 // Upload-specific loader with progress
 export function UploadLoader({ progress, message }: { progress?: number; message?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center space-y-4 p-8">
-      <div className="relative w-24 h-24">
+    <div className="flex flex-col items-center justify-center space-y-6 p-8">
+      <div className="relative w-28 h-28">
+        {/* Glow effect */}
+        <div className="absolute inset-0 rounded-full bg-primary-500/20 blur-xl animate-pulse" />
+        
         {/* Circular progress */}
-        <svg className="transform -rotate-90 w-24 h-24">
+        <svg className="transform -rotate-90 w-28 h-28 relative z-10">
           <circle
-            cx="48"
-            cy="48"
-            r="44"
+            cx="56"
+            cy="56"
+            r="48"
             stroke="currentColor"
-            strokeWidth="4"
+            strokeWidth="6"
             fill="none"
-            className="text-primary-200"
+            className="text-slate-200"
           />
           <circle
-            cx="48"
-            cy="48"
-            r="44"
-            stroke="currentColor"
-            strokeWidth="4"
+            cx="56"
+            cy="56"
+            r="48"
+            stroke="url(#gradient)"
+            strokeWidth="6"
             fill="none"
-            strokeDasharray={`${2 * Math.PI * 44}`}
-            strokeDashoffset={`${2 * Math.PI * 44 * (1 - (progress || 0) / 100)}`}
-            className="text-primary-500 transition-all duration-300"
+            strokeDasharray={`${2 * Math.PI * 48}`}
+            strokeDashoffset={`${2 * Math.PI * 48 * (1 - (progress || 0) / 100)}`}
+            className="transition-all duration-300"
             strokeLinecap="round"
           />
+          <defs>
+            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#667eea" />
+              <stop offset="100%" stopColor="#764ba2" />
+            </linearGradient>
+          </defs>
         </svg>
+        
         {/* Center icon */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-8 w-8 bg-primary-500 rounded-full flex items-center justify-center">
+          <div className="h-12 w-12 gradient-primary rounded-2xl flex items-center justify-center shadow-glow">
             <svg
-              className="h-5 w-5 text-white animate-bounce"
+              className="h-6 w-6 text-white animate-bounce"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -79,11 +87,12 @@ export function UploadLoader({ progress, message }: { progress?: number; message
           </div>
         </div>
       </div>
+      
       {message && (
         <div className="text-center">
-          <p className="text-sm font-medium text-gray-700">{message}</p>
+          <p className="text-base font-medium text-slate-700">{message}</p>
           {progress !== undefined && (
-            <p className="text-xs text-gray-500 mt-1">{progress}%</p>
+            <p className="text-sm text-slate-500 mt-1">{progress}% uploaded</p>
           )}
         </div>
       )}
@@ -94,43 +103,86 @@ export function UploadLoader({ progress, message }: { progress?: number; message
 // Processing steps loader
 export function ProcessingLoader({ step }: { step: number }) {
   const steps = [
-    { label: 'Extracting text from PDF...', icon: '📄' },
-    { label: 'Splitting into chunks...', icon: '✂️' },
-    { label: 'Creating embeddings...', icon: '🔢' },
-    { label: 'Storing in vector database...', icon: '💾' },
-    { label: 'Almost done...', icon: '✨' },
+    { label: 'Extracting text from PDF', icon: '📄', desc: 'Reading document content' },
+    { label: 'Splitting into chunks', icon: '✂️', desc: 'Organizing text blocks' },
+    { label: 'Creating embeddings', icon: '🧠', desc: 'Generating AI vectors' },
+    { label: 'Storing in database', icon: '💾', desc: 'Saving to Pinecone' },
+    { label: 'Finalizing', icon: '✨', desc: 'Almost ready!' },
   ];
 
+  const currentStep = steps[Math.min(step, steps.length - 1)];
+
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 p-8">
-      <div className="relative w-32 h-32">
-        {/* Animated circles */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-20 w-20 border-4 border-primary-200 rounded-full animate-ping" />
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-16 w-16 border-4 border-primary-300 rounded-full animate-pulse" />
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="h-12 w-12 bg-primary-500 rounded-full flex items-center justify-center text-2xl">
-            {steps[Math.min(step, steps.length - 1)].icon}
+    <div className="flex flex-col items-center justify-center space-y-8 p-8">
+      {/* Animated icon */}
+      <div className="relative">
+        {/* Outer ring */}
+        <div className="absolute inset-0 rounded-full gradient-primary opacity-20 blur-xl animate-pulse" 
+          style={{ width: '140px', height: '140px', left: '-10px', top: '-10px' }} />
+        
+        <div className="relative w-32 h-32">
+          {/* Spinning ring */}
+          <div className="absolute inset-0">
+            <svg className="w-32 h-32 animate-spin" style={{ animationDuration: '3s' }}>
+              <circle
+                cx="64"
+                cy="64"
+                r="58"
+                stroke="url(#processingGradient)"
+                strokeWidth="4"
+                fill="none"
+                strokeDasharray="100 260"
+                strokeLinecap="round"
+              />
+              <defs>
+                <linearGradient id="processingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#667eea" />
+                  <stop offset="50%" stopColor="#764ba2" />
+                  <stop offset="100%" stopColor="#f093fb" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          
+          {/* Inner content */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="h-20 w-20 rounded-2xl bg-white shadow-lg flex items-center justify-center text-4xl animate-float">
+              {currentStep.icon}
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Text */}
       <div className="text-center space-y-2">
-        <p className="text-sm font-medium text-gray-700">
-          {steps[Math.min(step, steps.length - 1)].label}
+        <p className="text-lg font-semibold text-slate-800">
+          {currentStep.label}
         </p>
-        <div className="flex space-x-1 justify-center">
-          {steps.map((_, index) => (
-            <div
-              key={index}
-              className={`h-2 w-2 rounded-full transition-all duration-300 ${
-                index <= step ? 'bg-primary-500' : 'bg-gray-300'
-              }`}
-            />
-          ))}
-        </div>
+        <p className="text-sm text-slate-500">
+          {currentStep.desc}
+        </p>
+      </div>
+
+      {/* Progress dots */}
+      <div className="flex items-center space-x-3">
+        {steps.map((_, index) => (
+          <div
+            key={index}
+            className={`transition-all duration-500 ${
+              index <= step 
+                ? 'h-3 w-3 gradient-primary rounded-full shadow-glow' 
+                : 'h-2 w-2 bg-slate-200 rounded-full'
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-64 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+        <div 
+          className="h-full gradient-primary rounded-full transition-all duration-500"
+          style={{ width: `${((step + 1) / steps.length) * 100}%` }}
+        />
       </div>
     </div>
   );

@@ -47,8 +47,8 @@ def extract_text_from_pdf(file_path: str) -> Dict[str, any]:
 
 def chunk_text(
     text: str,
-    chunk_size: int = 500,
-    chunk_overlap: int = 50
+    chunk_size: int = 300,  # OPTIMIZATION: Reduced from 500 to 300 for token savings
+    chunk_overlap: int = 30  # OPTIMIZATION: Reduced from 50 to 30 (10% overlap)
 ) -> List[PDFChunk]:
     """
     Split text into chunks with metadata

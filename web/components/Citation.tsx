@@ -1,5 +1,7 @@
 'use client';
 
+import { FileText } from 'lucide-react';
+
 interface CitationProps {
   source: string;
   variant?: 'user' | 'assistant';
@@ -8,13 +10,15 @@ interface CitationProps {
 export default function Citation({ source, variant = 'assistant' }: CitationProps) {
   return (
     <div className={`
-      text-xs px-2 py-1 rounded inline-block transition-all hover:scale-105
+      inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg 
+      transition-all duration-200 hover:scale-105 cursor-default
       ${variant === 'user' 
-        ? 'text-primary-100 bg-primary-400/30' 
-        : 'text-gray-600 bg-gray-50'
+        ? 'text-white/90 bg-white/20' 
+        : 'text-slate-600 bg-slate-100 hover:bg-slate-200'
       }
     `}>
-      📄 {source}
+      <FileText className="h-3 w-3" />
+      <span>{source}</span>
     </div>
   );
 }

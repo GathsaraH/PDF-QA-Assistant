@@ -4,17 +4,16 @@ Production-ready version with persistent vector storage
 """
 
 import os
-from typing import Dict, List
+from typing import Dict, List, Optional
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_pinecone import PineconeVectorStore
 from langchain_classic.chains import ConversationalRetrievalChain
-from langchain_classic.memory import ConversationBufferMemory
 from langchain_core.documents import Document
 
 from pinecone import Pinecone as PineconeClient, ServerlessSpec
 
-# In-memory storage for memories (Pinecone handles vector storage)
-memories: Dict[str, ConversationBufferMemory] = {}
+# Database import
+from database import get_recent_messages, save_message, track_token_usage, get_db
 
 # Pinecone client (singleton)
 pinecone_client = None
@@ -127,37 +126,43 @@ def initialize_rag(session_id: str, chunks: List[Dict]) -> None:
             namespace=session_id  # Use sessionId as namespace for isolation
         )
         
-        # Initialize memory
-        memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True,
-            output_key="answer"
-        )
-        memories[session_id] = memory
-        
+        # No longer using ConversationBufferMemory
+        # Messages will be stored in database and retrieved as needed
         print(f"RAG engine initialized for session {session_id} with {len(chunks)} chunks in Pinecone")
         
     except Exception as e:
         raise Exception(f"Failed to initialize RAG engine: {str(e)}")
 
 
-def query_rag(session_id: str, question: str) -> Dict[str, any]:
+def query_rag(session_id: str, question: str, db = None) -> Dict[str, any]:
     """
     Query RAG system with a question using Pinecone
+    Uses sliding window: only last 1 message for context (POC)
     
     Args:
         session_id: Session identifier
         question: User question
+        db: Database session
     
     Returns:
         Dictionary with 'answer' and 'sources' keys
     """
-    if session_id not in memories:
-        raise Exception("RAG engine not initialized. Please upload a PDF first.")
+    if not db:
+        from database import SessionLocal
+        db = next(SessionLocal())
     
     try:
+        # Check if session is initialized (document exists)
+        from database import Document
+        document = db.query(Document).filter(Document.session_id == session_id).first()
+        if not document:
+            raise Exception("RAG engine not initialized. Please upload a PDF first.")
+        
         # Initialize Pinecone if not already done
         initialize_pinecone()
+        
+        # Get last 1 message for context (sliding window - POC)
+        recent_messages = get_recent_messages(db, session_id, limit=1)
         
         # Create embeddings using Gemini
         api_key = os.getenv("GEMINI_API_KEY")
@@ -176,10 +181,7 @@ def query_rag(session_id: str, question: str) -> Dict[str, any]:
             namespace=session_id
         )
         
-        memory = memories[session_id]
-        
         # Create LLM using Gemini
-        # Try gemini-flash-latest first (better free tier), fallback to gemini-pro-latest
         try:
             llm = ChatGoogleGenerativeAI(
                 model="models/gemini-flash-latest",
@@ -197,29 +199,71 @@ def query_rag(session_id: str, question: str) -> Dict[str, any]:
                 convert_system_message_to_human=True
             )
         
-        # Create retrieval chain
+        # Build chat_history from last message (if exists)
+        # OPTIMIZATION: Truncate to max 100 chars to save tokens
+        MAX_HISTORY_LENGTH = 100
+        chat_history = []
+        if recent_messages:
+            last_msg = recent_messages[0]
+            # Truncate message content to save tokens
+            truncated_content = last_msg.content[:MAX_HISTORY_LENGTH]
+            if len(last_msg.content) > MAX_HISTORY_LENGTH:
+                truncated_content += "..."
+            
+            # Format: (human_message, ai_message) tuples
+            if last_msg.role == "user":
+                # Last was user, so no AI response yet - just user message
+                chat_history = [(truncated_content, "")]
+            elif last_msg.role == "assistant":
+                # Last was assistant - we need to get previous user message
+                # For POC with only 1 message, we'll use empty user message
+                chat_history = [("", truncated_content)]
+        
+        # OPTIMIZATION: Use k=2 instead of k=3 to reduce tokens (POC requirement)
+        # Create retrieval chain (without memory - we handle context manually)
         chain = ConversationalRetrievalChain.from_llm(
             llm,
-            vector_store.as_retriever(k=3),  # Retrieve top 3 chunks
-            memory=memory,
+            vector_store.as_retriever(k=2),  # Reduced from 3 to 2 for token optimization
             return_source_documents=True,
             verbose=False
         )
         
-        # Query
-        response = chain({"question": question})
+        # Query with chat_history - ConversationalRetrievalChain requires this
+        response = chain({
+            "question": question,
+            "chat_history": chat_history  # List of (human, ai) tuples
+        })
         
-        # Extract sources
+        # Extract sources (limit to prevent token bloat)
         sources = []
         if "source_documents" in response:
             sources = [
-                doc.metadata.get("source", "")
-                for doc in response["source_documents"]
+                doc.metadata.get("source", "")[:50]  # Truncate source strings
+                for doc in response["source_documents"][:2]  # Only first 2 sources
                 if doc.metadata.get("source")
             ]
         
+        answer = response.get("answer", "")
+        
+        # Calculate token usage (better estimation for optimization tracking)
+        # Gemini: ~1.3 tokens per word for English
+        question_tokens = len(question.split()) * 1.3
+        history_tokens = sum(len(msg.content.split()) * 1.3 for msg in recent_messages) if recent_messages else 0
+        # Estimate chunks: 2 chunks × ~300 chars = ~150 words = ~200 tokens
+        chunk_tokens = 200
+        input_tokens = int(question_tokens + history_tokens + chunk_tokens)
+        output_tokens = int(len(answer.split()) * 1.3)
+        
+        # Save messages to database with token counts
+        save_message(db, session_id, "user", question, token_count=int(question_tokens))
+        save_message(db, session_id, "assistant", answer, sources=sources, token_count=output_tokens)
+        
+        # Track token usage
+        track_token_usage(db, session_id, "gemini-flash-latest", 
+                         input_tokens, output_tokens)
+        
         return {
-            "answer": response.get("answer", ""),
+            "answer": answer,
             "sources": list(set(sources))  # Remove duplicates
         }
         
@@ -236,18 +280,21 @@ def clear_session(session_id: str) -> None:
             # Delete all vectors in the namespace
             pinecone_index.delete(delete_all=True, namespace=session_id)
         
-        if session_id in memories:
-            del memories[session_id]
-        
         print(f"Session {session_id} cleared from Pinecone")
         
     except Exception as e:
         print(f"Error clearing session: {str(e)}")
 
 
-def is_session_initialized(session_id: str) -> bool:
+def is_session_initialized(session_id: str, db = None) -> bool:
     """
-    Check if session is initialized
+    Check if session is initialized (document exists in DB)
     """
-    return session_id in memories
+    if not db:
+        db_gen = get_db()
+        db = next(db_gen)
+    
+    from database import Document
+    document = db.query(Document).filter(Document.session_id == session_id).first()
+    return document is not None
 

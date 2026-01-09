@@ -24,21 +24,31 @@ function ToastComponent({ toast, onClose }: ToastProps) {
     warning: AlertTriangle,
   };
 
-  const colors = {
-    success: 'bg-green-50 border-green-200 text-green-800',
-    error: 'bg-red-50 border-red-200 text-red-800',
-    info: 'bg-blue-50 border-blue-200 text-blue-800',
-    warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-  };
-
-  const iconColors = {
-    success: 'text-green-500',
-    error: 'text-red-500',
-    info: 'text-blue-500',
-    warning: 'text-yellow-500',
+  const styles = {
+    success: {
+      bg: 'bg-gradient-to-r from-green-500 to-emerald-500',
+      icon: 'text-white',
+      text: 'text-white',
+    },
+    error: {
+      bg: 'bg-gradient-to-r from-red-500 to-rose-500',
+      icon: 'text-white',
+      text: 'text-white',
+    },
+    info: {
+      bg: 'bg-gradient-to-r from-blue-500 to-indigo-500',
+      icon: 'text-white',
+      text: 'text-white',
+    },
+    warning: {
+      bg: 'bg-gradient-to-r from-amber-500 to-orange-500',
+      icon: 'text-white',
+      text: 'text-white',
+    },
   };
 
   const Icon = icons[toast.type];
+  const style = styles[toast.type];
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -51,19 +61,22 @@ function ToastComponent({ toast, onClose }: ToastProps) {
   return (
     <div
       className={`
-        flex items-center space-x-3 p-4 rounded-lg border shadow-lg
-        animate-slide-in-right
-        ${colors[toast.type]}
-        min-w-[300px] max-w-md
+        flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-lg
+        animate-slide-in-right backdrop-blur-sm
+        ${style.bg}
+        min-w-[320px] max-w-md
       `}
     >
-      <Icon className={`h-5 w-5 ${iconColors[toast.type]} flex-shrink-0`} />
-      <p className="flex-1 text-sm font-medium">{toast.message}</p>
+      <div className="flex-shrink-0 h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center">
+        <Icon className={`h-5 w-5 ${style.icon}`} />
+      </div>
+      <p className={`flex-1 text-sm font-medium ${style.text}`}>{toast.message}</p>
       <button
         onClick={() => onClose(toast.id)}
-        className="flex-shrink-0 hover:opacity-70 transition-opacity"
+        className="flex-shrink-0 h-7 w-7 rounded-lg bg-white/20 hover:bg-white/30 
+          flex items-center justify-center transition-colors"
       >
-        <X className="h-4 w-4" />
+        <X className="h-4 w-4 text-white" />
       </button>
     </div>
   );
@@ -73,7 +86,6 @@ export function ToastContainer() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
-    // Listen for toast events
     const handleToast = (e: CustomEvent<{ message: string; type: ToastType }>) => {
       const toast: Toast = {
         id: Date.now().toString(),
@@ -95,7 +107,7 @@ export function ToastContainer() {
   };
 
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2">
+    <div className="fixed top-4 right-4 z-50 space-y-3">
       {toasts.map((toast) => (
         <ToastComponent key={toast.id} toast={toast} onClose={handleClose} />
       ))}

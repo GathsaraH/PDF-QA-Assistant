@@ -1,17 +1,20 @@
 'use client';
 
-import { FileText } from 'lucide-react';
-
 interface CitationProps {
   source: string;
+  variant?: 'user' | 'assistant';
 }
 
-export default function Citation({ source }: CitationProps) {
+export default function Citation({ source, variant = 'assistant' }: CitationProps) {
   return (
-    <div className="flex items-center space-x-2 text-xs text-gray-600">
-      <FileText className="h-3 w-3" />
-      <span>{source}</span>
+    <div className={`
+      text-xs px-2 py-1 rounded inline-block transition-all hover:scale-105
+      ${variant === 'user' 
+        ? 'text-primary-100 bg-primary-400/30' 
+        : 'text-gray-600 bg-gray-50'
+      }
+    `}>
+      📄 {source}
     </div>
   );
 }
-

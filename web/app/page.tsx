@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import FileUpload from '@/components/FileUpload';
 import ChatInterface from '@/components/ChatInterface';
+import { ToastContainer } from '@/components/Toast';
 import { FileText, MessageSquare } from 'lucide-react';
 
 export default function Home() {
@@ -16,7 +17,8 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      <ToastContainer />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-8">
@@ -42,9 +44,10 @@ export default function Home() {
               />
             </div>
             {isReady && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800">
-                  ✓ PDF processed successfully! ({chunksCount} chunks ready)
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg animate-slide-in">
+                <p className="text-sm font-medium text-green-800 flex items-center space-x-2">
+                  <span className="text-green-600">✓</span>
+                  <span>PDF processed successfully! ({chunksCount} chunks ready)</span>
                 </p>
               </div>
             )}

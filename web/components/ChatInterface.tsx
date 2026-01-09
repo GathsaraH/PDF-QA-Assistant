@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Bot, User } from 'lucide-react';
 import Citation from './Citation';
+import { showToast } from './Toast';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -70,9 +71,10 @@ export default function ChatInterface({ sessionId, isReady }: ChatInterfaceProps
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error: any) {
+      showToast(error.message || 'Failed to get answer. Please try again.', 'error');
       const errorMessage: Message = {
         role: 'assistant',
-        content: `Error: ${error.message || 'Something went wrong'}`,
+        content: `Sorry, I encountered an error: ${error.message || 'Something went wrong'}. Please try again.`,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -89,9 +91,10 @@ export default function ChatInterface({ sessionId, isReady }: ChatInterfaceProps
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
         {messages.length === 0 ? (
-          <div className="text-center text-gray-500 mt-8">
+          <div className="text-center text-gray-500 mt-12 animate-fade-in">
+            <Bot className="h-12 w-12 mx-auto mb-4 text-gray-400" />
             <p className="text-lg font-medium mb-2">Ask questions about your PDF</p>
             <p className="text-sm">Try: "What is this document about?"</p>
           </div>
@@ -99,22 +102,45 @@ export default function ChatInterface({ sessionId, isReady }: ChatInterfaceProps
           messages.map((message, index) => (
             <div
               key={index}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex items-start space-x-3 animate-slide-in ${
+                message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+              }`}
             >
+              <div className={`
+                flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center
+                ${message.role === 'user' 
+                  ? 'bg-primary-500' 
+                  : 'bg-gray-200'
+                }
+              `}>
+                {message.role === 'user' ? (
+                  <User className="h-5 w-5 text-white" />
+                ) : (
+                  <Bot className="h-5 w-5 text-gray-600" />
+                )}
+              </div>
               <div
-                className={`max-w-[80%] rounded-lg p-4 ${
+                className={`max-w-[75%] rounded-2xl p-4 shadow-sm transition-all duration-300 ${
                   message.role === 'user'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-gray-100 text-gray-900'
+                    ? 'bg-primary-500 text-white rounded-tr-none'
+                    : 'bg-gray-100 text-gray-900 rounded-tl-none'
                 }`}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
                 {message.sources && message.sources.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-gray-300">
-                    <p className="text-xs font-semibold mb-2">Sources:</p>
+                  <div className={`mt-3 pt-3 ${
+                    message.role === 'user' 
+                      ? 'border-t border-primary-400' 
+                      : 'border-t border-gray-300'
+                  }`}>
+                    <p className={`text-xs font-semibold mb-2 ${
+                      message.role === 'user' ? 'text-primary-100' : 'text-gray-600'
+                    }`}>
+                      Sources:
+                    </p>
                     <div className="space-y-1">
                       {message.sources.map((source, idx) => (
-                        <Citation key={idx} source={source} />
+                        <Citation key={idx} source={source} variant={message.role} />
                       ))}
                     </div>
                   </div>
@@ -124,16 +150,27 @@ export default function ChatInterface({ sessionId, isReady }: ChatInterfaceProps
           ))
         )}
         {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg p-4">
-              <Loader2 className="h-5 w-5 animate-spin text-primary-500" />
+          <div className="flex items-start space-x-3 animate-slide-in">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+              <Bot className="h-5 w-5 text-gray-600" />
+            </div>
+            <div className="bg-gray-100 rounded-2xl rounded-tl-none p-4 shadow-sm">
+              <div className="flex items-center space-x-2">
+                <Loader2 className="h-4 w-4 animate-spin text-primary-500" />
+                <span className="text-sm text-gray-600">Thinking...</span>
+              </div>
+              <div className="flex space-x-1 mt-2">
+                <div className="h-1 w-1 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="h-1 w-1 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="h-1 w-1 bg-primary-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="border-t p-4">
+      <div className="border-t bg-white p-4">
         <div className="flex space-x-2">
           <input
             type="text"
@@ -142,14 +179,18 @@ export default function ChatInterface({ sessionId, isReady }: ChatInterfaceProps
             onKeyPress={handleKeyPress}
             placeholder={isReady ? "Ask a question..." : "Upload a PDF first..."}
             disabled={!isReady || isLoading}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-gray-100"
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed transition-all"
           />
           <button
             onClick={handleSend}
             disabled={!isReady || isLoading || !input.trim()}
-            className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center space-x-2"
+            className="px-6 py-3 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center space-x-2 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
           >
-            <Send className="h-5 w-5" />
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Send className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>

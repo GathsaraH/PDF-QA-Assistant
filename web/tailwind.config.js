@@ -8,16 +8,30 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
         },
+      },
+      animation: {
+        'slide-in-right': 'slide-in-right 0.3s ease-out',
+        'slide-in': 'slide-in 0.3s ease-out',
+        'fade-in': 'fade-in 0.5s ease-out',
+      },
+      scale: {
+        '102': '1.02',
       },
     },
   },
   plugins: [],
 }
-

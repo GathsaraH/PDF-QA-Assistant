@@ -5,7 +5,7 @@ Production-ready version with persistent vector storage
 
 import os
 from typing import Dict, List
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_pinecone import PineconeVectorStore
 from langchain_classic.chains import ConversationalRetrievalChain
 from langchain_classic.memory import ConversationBufferMemory
@@ -46,7 +46,7 @@ def initialize_pinecone():
             # Create index if it doesn't exist (v6+)
             pinecone_client.create_index(
                 name=index_name,
-                dimension=1536,  # OpenAI text-embedding-3-small dimension
+                dimension=768,  # Gemini text-embedding-004 dimension
                 metric="cosine",
                 spec=ServerlessSpec(
                     cloud="aws",
@@ -137,9 +137,14 @@ def query_rag(session_id: str, question: str) -> Dict[str, any]:
         # Initialize Pinecone if not already done
         initialize_pinecone()
         
-        # Create embeddings
-        embeddings = OpenAIEmbeddings(
-            model="text-embedding-3-small"
+        # Create embeddings using Gemini
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("GEMINI_API_KEY not found in environment variables")
+        
+        embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/text-embedding-004",
+            google_api_key=api_key
         )
         
         # Create Pinecone vector store (for querying)
@@ -151,10 +156,12 @@ def query_rag(session_id: str, question: str) -> Dict[str, any]:
         
         memory = memories[session_id]
         
-        # Create LLM
-        llm = ChatOpenAI(
-            model_name="gpt-3.5-turbo",
-            temperature=0.1
+        # Create LLM using Gemini
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash",
+            google_api_key=api_key,
+            temperature=0.1,
+            convert_system_message_to_human=True
         )
         
         # Create retrieval chain

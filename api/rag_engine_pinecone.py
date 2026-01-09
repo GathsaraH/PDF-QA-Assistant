@@ -179,13 +179,23 @@ def query_rag(session_id: str, question: str) -> Dict[str, any]:
         memory = memories[session_id]
         
         # Create LLM using Gemini
-        # Use gemini-1.5-flash (available on free tier)
-        llm = ChatGoogleGenerativeAI(
-            model="models/gemini-1.5-flash",
-            google_api_key=api_key,
-            temperature=0.1,
-            convert_system_message_to_human=True
-        )
+        # Try gemini-flash-latest first (better free tier), fallback to gemini-pro-latest
+        try:
+            llm = ChatGoogleGenerativeAI(
+                model="models/gemini-flash-latest",
+                google_api_key=api_key,
+                temperature=0.1,
+                convert_system_message_to_human=True
+            )
+        except Exception as e:
+            # Fallback to gemini-pro-latest if flash doesn't work
+            print(f"⚠️  gemini-flash-latest failed, trying gemini-pro-latest: {e}")
+            llm = ChatGoogleGenerativeAI(
+                model="models/gemini-pro-latest",
+                google_api_key=api_key,
+                temperature=0.1,
+                convert_system_message_to_human=True
+            )
         
         # Create retrieval chain
         chain = ConversationalRetrievalChain.from_llm(

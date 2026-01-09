@@ -72,7 +72,7 @@ pip install -r requirements.txt
 - **Free Tier**: ✅ Yes
 
 ### LLM
-- **Model**: `gemini-1.5-flash`
+- **Model**: `gemini-pro`
 - **Speed**: Fast
 - **Free Tier**: ✅ Yes (with limits)
 - **Temperature**: 0.1 (for consistent answers)
@@ -81,7 +81,7 @@ pip install -r requirements.txt
 
 ## 💰 Free Tier Limits
 
-### Gemini 1.5 Flash (Free Tier)
+### Gemini Pro (Free Tier)
 - **Requests per minute**: 15
 - **Requests per day**: 1,500
 - **Tokens per minute**: 1,000,000

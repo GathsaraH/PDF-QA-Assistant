@@ -42,8 +42,25 @@ def initialize_pinecone():
         # Check if index exists
         existing_indexes = [idx.name for idx in pinecone_client.list_indexes()]
         
-        if index_name not in existing_indexes:
+        if index_name in existing_indexes:
+            # Check if index has wrong dimension (1536 from OpenAI)
+            # Delete and recreate with correct dimension (768 for Gemini)
+            try:
+                index_info = pinecone_client.describe_index(index_name)
+                if index_info.dimension != 768:
+                    print(f"⚠️  Index {index_name} has dimension {index_info.dimension}, but we need 768 (Gemini)")
+                    print(f"🗑️  Deleting old index to create new one with correct dimension...")
+                    pinecone_client.delete_index(index_name)
+                    # Wait for deletion
+                    import time
+                    time.sleep(3)
+                    print(f"✅ Old index deleted")
+            except Exception as e:
+                print(f"⚠️  Could not check index dimension: {e}")
+        
+        if index_name not in [idx.name for idx in pinecone_client.list_indexes()]:
             # Create index if it doesn't exist (v6+)
+            print(f"📦 Creating new Pinecone index: {index_name} with dimension 768 (Gemini)")
             pinecone_client.create_index(
                 name=index_name,
                 dimension=768,  # Gemini text-embedding-004 dimension
@@ -53,7 +70,7 @@ def initialize_pinecone():
                     region=environment
                 )
             )
-            print(f"Created Pinecone index: {index_name}")
+            print(f"✅ Created Pinecone index: {index_name}")
             # Wait for index to be ready
             import time
             time.sleep(5)
@@ -92,9 +109,14 @@ def initialize_rag(session_id: str, chunks: List[Dict]) -> None:
             for chunk in chunks
         ]
         
-        # Create embeddings
-        embeddings = OpenAIEmbeddings(
-            model="text-embedding-3-small"
+        # Create embeddings using Gemini
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise Exception("GEMINI_API_KEY not found in environment variables")
+        
+        embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/text-embedding-004",
+            google_api_key=api_key
         )
         
         # Create Pinecone vector store
@@ -157,8 +179,9 @@ def query_rag(session_id: str, question: str) -> Dict[str, any]:
         memory = memories[session_id]
         
         # Create LLM using Gemini
+        # Use gemini-1.5-flash (available on free tier)
         llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model="models/gemini-1.5-flash",
             google_api_key=api_key,
             temperature=0.1,
             convert_system_message_to_human=True
